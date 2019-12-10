@@ -5,17 +5,20 @@
 
 use std::thread;
 use std::sync::mpsc::channel;
+use std::sync::mpsc::Sender;
+use std::sync::mpsc::Receiver;
+use std::sync::mpsc::RecvError;
 use std::time::Duration;
 
 fn main() {
     let vec: Vec<u16> = (1..=10).collect();
 
-    let mut chans = vec![];
-    let mut thrs = vec![];
+    let mut chans: [Option<Sender<Option<u16>>>; 2] = [None, None];
+    let mut thrs: [Option<thread::JoinHandle<()>>; 2] = [None, None];
 
-    for _ in 0..2 {
+    for i in 0..2 {
         let (sender, receiver) = channel();
-        chans.push(sender);
+        chans[i] = Some(sender);
 
         // 工作线程负责接收任务
         let thr = thread::spawn(move || {
@@ -23,38 +26,43 @@ fn main() {
 
             // TODO: use Future
             loop {
-                match receiver.recv().unwrap() {
-                    Some(elem) => println!("{:?} consume element: {:?}", tid, elem),
-                    None => {
-                        println!("{:?} consume done", tid);
-                        break;
+                match receiver.recv() {
+                    Ok(option) => {
+                        match option {
+                            Some(elem) => println!("{:?} consume element: {:?}", tid, elem),
+                            None => {
+                                println!("{:?} consume done", tid);
+                                break;
+                            },
+                        }
                     },
+                    Err(err) => println!("recv err: {:?}", err),
                 }
             }
 
             println!("{:?} terminate", tid);
         });
 
-        let handler = Some(thr);
-        thrs.push(handler);
+        thrs[i] = Some(thr);
     }
 
     // 主线程负责调度策略
     for i in 0..vec.len() {
         thread::sleep(Duration::from_millis(100));
-        let chan = &chans[i % &chans.len()];
-        chan.send(Some(vec[i]));
+        if let Some(ref chan) = &chans[i % &chans.len()] {
+            &chan.send(Some(vec[i]));
+        }
     }
 
     // 依次通知结束
     for i in 0..chans.len() {
-        chans[i].send(None);
+        if let Some(ref chan) = &chans[i] {
+            &chan.send(None);
+        }
     }
 
     // 等待所有工作线程退出
     for i in 0..thrs.len() {
         thrs[i].take().unwrap().join();
     }
-
-    thread::sleep(Duration::from_secs(100));
 }
