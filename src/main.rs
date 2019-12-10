@@ -6,8 +6,6 @@
 use std::thread;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
-use std::sync::mpsc::Receiver;
-use std::sync::mpsc::RecvError;
 use std::time::Duration;
 
 fn main() {
