@@ -37,7 +37,7 @@ impl Future for ConsumerFuture {
 }
 
 impl ConsumerFuture {
-    pub fn new(atomic_vec: Arc<Mutex<Vec<u16>>>, capacity: usize) -> Self {
+    pub fn new(atomic_vec: Arc<Mutex<Vec<u8>>>, capacity: usize) -> Self {
         let shared_state = Arc::new(Mutex::new(SharedState {
             completed: false,
             waker: None,
@@ -75,7 +75,7 @@ impl ConsumerFuture {
 }
 
 fn main() {
-    let vec: Vec<u16> = (1..=10).collect();
+    let vec: Vec<u8> = (1..=10).collect();
     let capacity = vec.len();
     let atomic_vec = Arc::new(Mutex::new(vec));
 
